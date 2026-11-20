@@ -19,3 +19,6 @@ En las etiquetas subtotal, descuento, empaque, ITBIS y total a pagar.
 Mensajes de error si falta el producto, el precio es inválido o no hay productos al calcular.
 
 # El trabajo se relizo en visual estudio 
+<img width="1139" height="681" alt="WhatsApp Image 2026-11-19 at 23 22 25" src="https://github.com/user-attachments/assets/1e5628d1-478a-4b45-bd4e-abd0c980b37f" />
+<img width="1282" height="683" alt="WhatsApp Image 2026-11-19 at 23 29 03" src="https://github.com/user-attachments/assets/362a3135-d8b5-4854-bb14-b2704e1d0d0f" />
+
