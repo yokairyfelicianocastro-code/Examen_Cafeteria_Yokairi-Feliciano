@@ -1,0 +1,629 @@
+﻿using System;
+using System.Windows.Forms;
+
+
+namespace Examen_Cafeteria_Yokairi_Feliciano
+{
+    public partial class frmPedidos : Form
+    {
+        // Constantes de las reglas de negocio
+        private const decimal RECARGO_GRANDE = 25m;
+        private const decimal RECARGO_EXTRA = 30m;
+        private const decimal EMPAQUE_LLEVAR = 20m;
+        private const decimal PORCENTAJE_DESCUENTO = 0.10m;
+        private const decimal PORCENTAJE_ITBIS = 0.18m;
+
+        // Subtotal acumulado del pedido
+        private decimal subtotal = 0m;
+
+        private System.ComponentModel.IContainer components = null;
+
+        public frmPedidos()
+        {
+            InitializeComponent();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        // ---------- Load: valores iniciales ----------
+        private void frmPedidos_Load(object sender, EventArgs e)
+        {
+            dtpFecha.Value = DateTime.Today;
+            rbtNormal.Checked = true;
+            rbtLocal.Checked = true;
+            nudCantidad.Minimum = 1;
+            nudCantidad.Maximum = 20;
+            nudCantidad.Value = 1;
+            lblEncabezado.Text = "Cant".PadRight(6) + "Producto".PadRight(24) + "Precio".PadLeft(10) + "Total".PadLeft(12);
+            lblSubtotal.Text = "RD$ 0.00";
+            lblDescuento.Text = "RD$ 0.00";
+            lblEmpaque.Text = "RD$ 0.00";
+            lblItbis.Text = "RD$ 0.00";
+            lblTotal.Text = "RD$ 0.00";
+            txtCliente.Focus();
+        }
+
+        // ---------- Agregar al pedido ----------
+        private void btnAgregar_Click(object sender, EventArgs e)
+        {
+            if (txtProducto.Text.Trim() == "")
+            {
+                MessageBox.Show("Digite el nombre del producto.", "Cafeteria El Buen Sabor", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtProducto.Focus();
+                return;
+            }
+
+            decimal precioDigitado;
+            if (!decimal.TryParse(txtPrecio.Text, out precioDigitado) || precioDigitado <= 0)
+            {
+                MessageBox.Show("Digite un precio valido mayor que cero.", "Cafeteria El Buen Sabor", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtPrecio.Focus();
+                return;
+            }
+
+            // Regla 1: precio unitario = precio digitado + 25 si es grande + 30 si lleva porcion extra
+            decimal precioUnitario = precioDigitado;
+            if (rbtGrande.Checked)
+            {
+                precioUnitario += RECARGO_GRANDE;
+            }
+            if (chkPorcionExtra.Checked)
+            {
+                precioUnitario += RECARGO_EXTRA;
+            }
+
+            // Regla 2: total de linea = precio unitario x cantidad
+            decimal totalLinea = precioUnitario * nudCantidad.Value;
+            subtotal += totalLinea;
+
+            string tamano = rbtGrande.Checked ? "Grande" : "Normal";
+            string productoConTamano = txtProducto.Text.Trim() + " (" + tamano + ")";
+
+            lstPedido.Items.Add(
+                ((int)nudCantidad.Value).ToString().PadRight(6) +
+                productoConTamano.PadRight(24) +
+                precioUnitario.ToString("0.00").PadLeft(10) +
+                totalLinea.ToString("0.00").PadLeft(12));
+
+            lblSubtotal.Text = "RD$ " + subtotal.ToString("0.00");
+
+            // Reiniciar solo los controles del producto
+            txtProducto.Clear();
+            txtPrecio.Clear();
+            nudCantidad.Value = 1;
+            rbtNormal.Checked = true;
+            chkPorcionExtra.Checked = false;
+            txtProducto.Focus();
+        }
+
+        // ---------- Calcular total ----------
+        private void btnCalcular_Click(object sender, EventArgs e)
+        {
+            if (lstPedido.Items.Count == 0)
+            {
+                MessageBox.Show("Debe agregar al menos un producto al pedido.", "Cafeteria El Buen Sabor", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Regla 3: descuento 10% si el cliente es frecuente
+            decimal descuento = 0m;
+            if (chkFrecuente.Checked)
+            {
+                descuento = subtotal * PORCENTAJE_DESCUENTO;
+            }
+
+            // Regla 4: empaque RD$20 una sola vez si es para llevar
+            decimal empaque = 0m;
+            if (rbtLlevar.Checked)
+            {
+                empaque = EMPAQUE_LLEVAR;
+            }
+
+            // Regla 5: base imponible = subtotal - descuento + empaque
+            decimal baseImponible = subtotal - descuento + empaque;
+
+            // Regla 6: ITBIS 18% de la base imponible, total = base + ITBIS
+            decimal itbis = baseImponible * PORCENTAJE_ITBIS;
+            decimal total = baseImponible + itbis;
+
+            lblDescuento.Text = "RD$ " + descuento.ToString("0.00");
+            lblEmpaque.Text = "RD$ " + empaque.ToString("0.00");
+            lblItbis.Text = "RD$ " + itbis.ToString("0.00");
+            lblTotal.Text = "RD$ " + total.ToString("0.00");
+        }
+
+        // ---------- Nuevo pedido ----------
+        private void btnLimpiar_Click(object sender, EventArgs e)
+        {
+            txtCliente.Clear();
+            chkFrecuente.Checked = false;
+            dtpFecha.Value = DateTime.Today;
+            txtProducto.Clear();
+            txtPrecio.Clear();
+            nudCantidad.Value = 1;
+            rbtNormal.Checked = true;
+            rbtLocal.Checked = true;
+            chkPorcionExtra.Checked = false;
+            lstPedido.Items.Clear();
+            subtotal = 0m;
+            lblEncabezado.Text = "Cant".PadRight(6) + "Producto".PadRight(24) + "Precio".PadLeft(10) + "Total".PadLeft(12);
+            lblSubtotal.Text = "RD$ 0.00";
+            lblDescuento.Text = "RD$ 0.00";
+            lblEmpaque.Text = "RD$ 0.00";
+            lblItbis.Text = "RD$ 0.00";
+            lblTotal.Text = "RD$ 0.00";
+            txtCliente.Focus();
+        }
+
+        // ---------- Salir ----------
+        private void btnSalir_Click(object sender, EventArgs e)
+        {
+            DialogResult respuesta = MessageBox.Show("¿Desea salir de la aplicacion?", "Cafeteria El Buen Sabor", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (respuesta == DialogResult.Yes)
+            {
+                this.Close();
+            }
+        }
+
+        // ---------- Diseno (InitializeComponent) ----------
+        private void InitializeComponent()
+        {
+            this.lblTotal = new System.Windows.Forms.Label();
+            this.lblTotalTxt = new System.Windows.Forms.Label();
+            this.lblItbis = new System.Windows.Forms.Label();
+            this.lblItbisTxt = new System.Windows.Forms.Label();
+            this.lblEmpaque = new System.Windows.Forms.Label();
+            this.lblEmpaqueTxt = new System.Windows.Forms.Label();
+            this.lblDescuento = new System.Windows.Forms.Label();
+            this.lblDescuentoTxt = new System.Windows.Forms.Label();
+            this.lblSubtotal = new System.Windows.Forms.Label();
+            this.lblSubtotalTxt = new System.Windows.Forms.Label();
+            this.lstPedido = new System.Windows.Forms.ListBox();
+            this.lblEncabezado = new System.Windows.Forms.Label();
+            this.btnAgregar = new System.Windows.Forms.Button();
+            this.btnSalir = new System.Windows.Forms.Button();
+            this.btnLimpiar = new System.Windows.Forms.Button();
+            this.btnCalcular = new System.Windows.Forms.Button();
+            this.chkPorcionExtra = new System.Windows.Forms.CheckBox();
+            this.rbtLocal = new System.Windows.Forms.RadioButton();
+            this.rbtLlevar = new System.Windows.Forms.RadioButton();
+            this.grpServicio = new System.Windows.Forms.GroupBox();
+            this.rbtNormal = new System.Windows.Forms.RadioButton();
+            this.rbtGrande = new System.Windows.Forms.RadioButton();
+            this.grpTamano = new System.Windows.Forms.GroupBox();
+            this.nudCantidad = new System.Windows.Forms.NumericUpDown();
+            this.lblCantidad = new System.Windows.Forms.Label();
+            this.txtPrecio = new System.Windows.Forms.TextBox();
+            this.lblPrecio = new System.Windows.Forms.Label();
+            this.txtProducto = new System.Windows.Forms.TextBox();
+            this.lblProducto = new System.Windows.Forms.Label();
+            this.dtpFecha = new System.Windows.Forms.DateTimePicker();
+            this.lblFecha = new System.Windows.Forms.Label();
+            this.chkFrecuente = new System.Windows.Forms.CheckBox();
+            this.txtCliente = new System.Windows.Forms.TextBox();
+            this.lblCliente = new System.Windows.Forms.Label();
+            this.grpServicio.SuspendLayout();
+            this.grpTamano.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.nudCantidad)).BeginInit();
+            this.SuspendLayout();
+            //
+            // lblTotal
+            //
+            this.lblTotal.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.lblTotal.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.lblTotal.Location = new System.Drawing.Point(620, 366);
+            this.lblTotal.Name = "lblTotal";
+            this.lblTotal.Size = new System.Drawing.Size(160, 26);
+            this.lblTotal.TabIndex = 29;
+            this.lblTotal.Text = "RD$ 0.00";
+            this.lblTotal.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            //
+            // lblTotalTxt
+            //
+            this.lblTotalTxt.AutoSize = true;
+            this.lblTotalTxt.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.lblTotalTxt.Location = new System.Drawing.Point(395, 372);
+            this.lblTotalTxt.Name = "lblTotalTxt";
+            this.lblTotalTxt.Size = new System.Drawing.Size(96, 15);
+            this.lblTotalTxt.TabIndex = 28;
+            this.lblTotalTxt.Text = "TOTAL A PAGAR";
+            //
+            // lblItbis
+            //
+            this.lblItbis.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.lblItbis.Location = new System.Drawing.Point(620, 330);
+            this.lblItbis.Name = "lblItbis";
+            this.lblItbis.Size = new System.Drawing.Size(160, 23);
+            this.lblItbis.TabIndex = 27;
+            this.lblItbis.Text = "RD$ 0.00";
+            this.lblItbis.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            //
+            // lblItbisTxt
+            //
+            this.lblItbisTxt.AutoSize = true;
+            this.lblItbisTxt.Location = new System.Drawing.Point(395, 334);
+            this.lblItbisTxt.Name = "lblItbisTxt";
+            this.lblItbisTxt.Size = new System.Drawing.Size(68, 15);
+            this.lblItbisTxt.TabIndex = 26;
+            this.lblItbisTxt.Text = "ITBIS (18 %)";
+            //
+            // lblEmpaque
+            //
+            this.lblEmpaque.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.lblEmpaque.Location = new System.Drawing.Point(620, 302);
+            this.lblEmpaque.Name = "lblEmpaque";
+            this.lblEmpaque.Size = new System.Drawing.Size(160, 23);
+            this.lblEmpaque.TabIndex = 25;
+            this.lblEmpaque.Text = "RD$ 0.00";
+            this.lblEmpaque.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            //
+            // lblEmpaqueTxt
+            //
+            this.lblEmpaqueTxt.AutoSize = true;
+            this.lblEmpaqueTxt.Location = new System.Drawing.Point(395, 306);
+            this.lblEmpaqueTxt.Name = "lblEmpaqueTxt";
+            this.lblEmpaqueTxt.Size = new System.Drawing.Size(57, 15);
+            this.lblEmpaqueTxt.TabIndex = 24;
+            this.lblEmpaqueTxt.Text = "Empaque";
+            //
+            // lblDescuento
+            //
+            this.lblDescuento.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.lblDescuento.Location = new System.Drawing.Point(620, 274);
+            this.lblDescuento.Name = "lblDescuento";
+            this.lblDescuento.Size = new System.Drawing.Size(160, 23);
+            this.lblDescuento.TabIndex = 23;
+            this.lblDescuento.Text = "RD$ 0.00";
+            this.lblDescuento.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            //
+            // lblDescuentoTxt
+            //
+            this.lblDescuentoTxt.AutoSize = true;
+            this.lblDescuentoTxt.Location = new System.Drawing.Point(395, 278);
+            this.lblDescuentoTxt.Name = "lblDescuentoTxt";
+            this.lblDescuentoTxt.Size = new System.Drawing.Size(63, 15);
+            this.lblDescuentoTxt.TabIndex = 22;
+            this.lblDescuentoTxt.Text = "Descuento";
+            //
+            // lblSubtotal
+            //
+            this.lblSubtotal.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.lblSubtotal.Location = new System.Drawing.Point(620, 246);
+            this.lblSubtotal.Name = "lblSubtotal";
+            this.lblSubtotal.Size = new System.Drawing.Size(160, 23);
+            this.lblSubtotal.TabIndex = 21;
+            this.lblSubtotal.Text = "RD$ 0.00";
+            this.lblSubtotal.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            //
+            // lblSubtotalTxt
+            //
+            this.lblSubtotalTxt.AutoSize = true;
+            this.lblSubtotalTxt.Location = new System.Drawing.Point(395, 250);
+            this.lblSubtotalTxt.Name = "lblSubtotalTxt";
+            this.lblSubtotalTxt.Size = new System.Drawing.Size(51, 15);
+            this.lblSubtotalTxt.TabIndex = 20;
+            this.lblSubtotalTxt.Text = "Subtotal";
+            //
+            // lstPedido
+            //
+            this.lstPedido.Font = new System.Drawing.Font("Consolas", 9F);
+            this.lstPedido.FormattingEnabled = true;
+            this.lstPedido.ItemHeight = 14;
+            this.lstPedido.Location = new System.Drawing.Point(395, 88);
+            this.lstPedido.Name = "lstPedido";
+            this.lstPedido.Size = new System.Drawing.Size(385, 130);
+            this.lstPedido.TabIndex = 19;
+            //
+            // lblEncabezado
+            //
+            this.lblEncabezado.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Bold);
+            this.lblEncabezado.Location = new System.Drawing.Point(395, 68);
+            this.lblEncabezado.Name = "lblEncabezado";
+            this.lblEncabezado.Size = new System.Drawing.Size(385, 20);
+            this.lblEncabezado.TabIndex = 18;
+            //
+            // btnAgregar
+            //
+            this.btnAgregar.Location = new System.Drawing.Point(395, 21);
+            this.btnAgregar.Name = "btnAgregar";
+            this.btnAgregar.Size = new System.Drawing.Size(385, 36);
+            this.btnAgregar.TabIndex = 17;
+            this.btnAgregar.Text = "Agregar al pedido";
+            this.btnAgregar.UseVisualStyleBackColor = true;
+            this.btnAgregar.Click += new System.EventHandler(this.btnAgregar_Click);
+            //
+            // btnSalir
+            //
+            this.btnSalir.Location = new System.Drawing.Point(256, 355);
+            this.btnSalir.Name = "btnSalir";
+            this.btnSalir.Size = new System.Drawing.Size(104, 36);
+            this.btnSalir.TabIndex = 16;
+            this.btnSalir.Text = "Salir";
+            this.btnSalir.UseVisualStyleBackColor = true;
+            this.btnSalir.Click += new System.EventHandler(this.btnSalir_Click);
+            //
+            // btnLimpiar
+            //
+            this.btnLimpiar.Location = new System.Drawing.Point(138, 355);
+            this.btnLimpiar.Name = "btnLimpiar";
+            this.btnLimpiar.Size = new System.Drawing.Size(108, 36);
+            this.btnLimpiar.TabIndex = 15;
+            this.btnLimpiar.Text = "Nuevo pedido";
+            this.btnLimpiar.UseVisualStyleBackColor = true;
+            this.btnLimpiar.Click += new System.EventHandler(this.btnLimpiar_Click);
+            //
+            // btnCalcular
+            //
+            this.btnCalcular.Location = new System.Drawing.Point(20, 355);
+            this.btnCalcular.Name = "btnCalcular";
+            this.btnCalcular.Size = new System.Drawing.Size(108, 36);
+            this.btnCalcular.TabIndex = 14;
+            this.btnCalcular.Text = "Calcular total";
+            this.btnCalcular.UseVisualStyleBackColor = true;
+            this.btnCalcular.Click += new System.EventHandler(this.btnCalcular_Click);
+            //
+            // chkPorcionExtra
+            //
+            this.chkPorcionExtra.AutoSize = true;
+            this.chkPorcionExtra.Location = new System.Drawing.Point(23, 318);
+            this.chkPorcionExtra.Name = "chkPorcionExtra";
+            this.chkPorcionExtra.Size = new System.Drawing.Size(148, 19);
+            this.chkPorcionExtra.TabIndex = 13;
+            this.chkPorcionExtra.Text = "Porción extra (+RD$30)";
+            this.chkPorcionExtra.UseVisualStyleBackColor = true;
+            //
+            // rbtLocal
+            //
+            this.rbtLocal.AutoSize = true;
+            this.rbtLocal.Checked = true;
+            this.rbtLocal.Location = new System.Drawing.Point(12, 24);
+            this.rbtLocal.Name = "rbtLocal";
+            this.rbtLocal.Size = new System.Drawing.Size(121, 19);
+            this.rbtLocal.TabIndex = 0;
+            this.rbtLocal.TabStop = true;
+            this.rbtLocal.Text = "Consumir en local";
+            this.rbtLocal.UseVisualStyleBackColor = true;
+            //
+            // rbtLlevar
+            //
+            this.rbtLlevar.AutoSize = true;
+            this.rbtLlevar.Location = new System.Drawing.Point(12, 52);
+            this.rbtLlevar.Name = "rbtLlevar";
+            this.rbtLlevar.Size = new System.Drawing.Size(131, 19);
+            this.rbtLlevar.TabIndex = 1;
+            this.rbtLlevar.Text = "Para llevar (+RD$20)";
+            this.rbtLlevar.UseVisualStyleBackColor = true;
+            //
+            // grpServicio
+            //
+            this.grpServicio.Controls.Add(this.rbtLlevar);
+            this.grpServicio.Controls.Add(this.rbtLocal);
+            this.grpServicio.Location = new System.Drawing.Point(195, 215);
+            this.grpServicio.Name = "grpServicio";
+            this.grpServicio.Size = new System.Drawing.Size(165, 90);
+            this.grpServicio.TabIndex = 12;
+            this.grpServicio.TabStop = false;
+            this.grpServicio.Text = "Servicio";
+            //
+            // rbtNormal
+            //
+            this.rbtNormal.AutoSize = true;
+            this.rbtNormal.Checked = true;
+            this.rbtNormal.Location = new System.Drawing.Point(12, 24);
+            this.rbtNormal.Name = "rbtNormal";
+            this.rbtNormal.Size = new System.Drawing.Size(65, 19);
+            this.rbtNormal.TabIndex = 0;
+            this.rbtNormal.TabStop = true;
+            this.rbtNormal.Text = "Normal";
+            this.rbtNormal.UseVisualStyleBackColor = true;
+            //
+            // rbtGrande
+            //
+            this.rbtGrande.AutoSize = true;
+            this.rbtGrande.Location = new System.Drawing.Point(12, 52);
+            this.rbtGrande.Name = "rbtGrande";
+            this.rbtGrande.Size = new System.Drawing.Size(115, 19);
+            this.rbtGrande.TabIndex = 1;
+            this.rbtGrande.Text = "Grande (+RD$25)";
+            this.rbtGrande.UseVisualStyleBackColor = true;
+            //
+            // grpTamano
+            //
+            this.grpTamano.Controls.Add(this.rbtGrande);
+            this.grpTamano.Controls.Add(this.rbtNormal);
+            this.grpTamano.Location = new System.Drawing.Point(20, 215);
+            this.grpTamano.Name = "grpTamano";
+            this.grpTamano.Size = new System.Drawing.Size(165, 90);
+            this.grpTamano.TabIndex = 11;
+            this.grpTamano.TabStop = false;
+            this.grpTamano.Text = "Tamaño";
+            //
+            // nudCantidad
+            //
+            this.nudCantidad.Location = new System.Drawing.Point(95, 179);
+            this.nudCantidad.Maximum = new decimal(new int[] { 20, 0, 0, 0 });
+            this.nudCantidad.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            this.nudCantidad.Name = "nudCantidad";
+            this.nudCantidad.Size = new System.Drawing.Size(80, 23);
+            this.nudCantidad.TabIndex = 10;
+            this.nudCantidad.Value = new decimal(new int[] { 1, 0, 0, 0 });
+            //
+            // lblCantidad
+            //
+            this.lblCantidad.AutoSize = true;
+            this.lblCantidad.Location = new System.Drawing.Point(20, 182);
+            this.lblCantidad.Name = "lblCantidad";
+            this.lblCantidad.Size = new System.Drawing.Size(58, 15);
+            this.lblCantidad.TabIndex = 9;
+            this.lblCantidad.Text = "Cantidad:";
+            //
+            // txtPrecio
+            //
+            this.txtPrecio.Location = new System.Drawing.Point(95, 147);
+            this.txtPrecio.Name = "txtPrecio";
+            this.txtPrecio.Size = new System.Drawing.Size(265, 23);
+            this.txtPrecio.TabIndex = 8;
+            //
+            // lblPrecio
+            //
+            this.lblPrecio.AutoSize = true;
+            this.lblPrecio.Location = new System.Drawing.Point(20, 150);
+            this.lblPrecio.Name = "lblPrecio";
+            this.lblPrecio.Size = new System.Drawing.Size(43, 15);
+            this.lblPrecio.TabIndex = 7;
+            this.lblPrecio.Text = "Precio:";
+            //
+            // txtProducto
+            //
+            this.txtProducto.Location = new System.Drawing.Point(95, 115);
+            this.txtProducto.Name = "txtProducto";
+            this.txtProducto.Size = new System.Drawing.Size(265, 23);
+            this.txtProducto.TabIndex = 6;
+            //
+            // lblProducto
+            //
+            this.lblProducto.AutoSize = true;
+            this.lblProducto.Location = new System.Drawing.Point(20, 118);
+            this.lblProducto.Name = "lblProducto";
+            this.lblProducto.Size = new System.Drawing.Size(59, 15);
+            this.lblProducto.TabIndex = 5;
+            this.lblProducto.Text = "Producto:";
+            //
+            // dtpFecha
+            //
+            this.dtpFecha.Format = System.Windows.Forms.DateTimePickerFormat.Short;
+            this.dtpFecha.Location = new System.Drawing.Point(95, 83);
+            this.dtpFecha.Name = "dtpFecha";
+            this.dtpFecha.Size = new System.Drawing.Size(265, 23);
+            this.dtpFecha.TabIndex = 4;
+            //
+            // lblFecha
+            //
+            this.lblFecha.AutoSize = true;
+            this.lblFecha.Location = new System.Drawing.Point(20, 86);
+            this.lblFecha.Name = "lblFecha";
+            this.lblFecha.Size = new System.Drawing.Size(41, 15);
+            this.lblFecha.TabIndex = 3;
+            this.lblFecha.Text = "Fecha:";
+            //
+            // chkFrecuente
+            //
+            this.chkFrecuente.AutoSize = true;
+            this.chkFrecuente.Location = new System.Drawing.Point(23, 54);
+            this.chkFrecuente.Name = "chkFrecuente";
+            this.chkFrecuente.Size = new System.Drawing.Size(116, 19);
+            this.chkFrecuente.TabIndex = 2;
+            this.chkFrecuente.Text = "Cliente frecuente";
+            this.chkFrecuente.UseVisualStyleBackColor = true;
+            //
+            // txtCliente
+            //
+            this.txtCliente.Location = new System.Drawing.Point(95, 21);
+            this.txtCliente.Name = "txtCliente";
+            this.txtCliente.Size = new System.Drawing.Size(265, 23);
+            this.txtCliente.TabIndex = 1;
+            //
+            // lblCliente
+            //
+            this.lblCliente.AutoSize = true;
+            this.lblCliente.Location = new System.Drawing.Point(20, 24);
+            this.lblCliente.Name = "lblCliente";
+            this.lblCliente.Size = new System.Drawing.Size(47, 15);
+            this.lblCliente.TabIndex = 0;
+            this.lblCliente.Text = "Cliente:";
+            //
+            // frmPedidos
+            //
+            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = System.Drawing.Color.White;
+            this.ClientSize = new System.Drawing.Size(800, 414);
+            this.Controls.Add(this.lblTotal);
+            this.Controls.Add(this.lblTotalTxt);
+            this.Controls.Add(this.lblItbis);
+            this.Controls.Add(this.lblItbisTxt);
+            this.Controls.Add(this.lblEmpaque);
+            this.Controls.Add(this.lblEmpaqueTxt);
+            this.Controls.Add(this.lblDescuento);
+            this.Controls.Add(this.lblDescuentoTxt);
+            this.Controls.Add(this.lblSubtotal);
+            this.Controls.Add(this.lblSubtotalTxt);
+            this.Controls.Add(this.lstPedido);
+            this.Controls.Add(this.lblEncabezado);
+            this.Controls.Add(this.btnAgregar);
+            this.Controls.Add(this.btnSalir);
+            this.Controls.Add(this.btnLimpiar);
+            this.Controls.Add(this.btnCalcular);
+            this.Controls.Add(this.chkPorcionExtra);
+            this.Controls.Add(this.grpServicio);
+            this.Controls.Add(this.grpTamano);
+            this.Controls.Add(this.nudCantidad);
+            this.Controls.Add(this.lblCantidad);
+            this.Controls.Add(this.txtPrecio);
+            this.Controls.Add(this.lblPrecio);
+            this.Controls.Add(this.txtProducto);
+            this.Controls.Add(this.lblProducto);
+            this.Controls.Add(this.dtpFecha);
+            this.Controls.Add(this.lblFecha);
+            this.Controls.Add(this.chkFrecuente);
+            this.Controls.Add(this.txtCliente);
+            this.Controls.Add(this.lblCliente);
+            this.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
+            this.Name = "frmPedidos";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.Text = "Cafetería El Buen Sabor - Pedidos";
+            this.Load += new System.EventHandler(this.frmPedidos_Load);
+            this.grpServicio.ResumeLayout(false);
+            this.grpServicio.PerformLayout();
+            this.grpTamano.ResumeLayout(false);
+            this.grpTamano.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.nudCantidad)).EndInit();
+            this.ResumeLayout(false);
+            this.PerformLayout();
+        }
+
+        private System.Windows.Forms.Label lblTotal;
+        private System.Windows.Forms.Label lblTotalTxt;
+        private System.Windows.Forms.Label lblItbis;
+        private System.Windows.Forms.Label lblItbisTxt;
+        private System.Windows.Forms.Label lblEmpaque;
+        private System.Windows.Forms.Label lblEmpaqueTxt;
+        private System.Windows.Forms.Label lblDescuento;
+        private System.Windows.Forms.Label lblDescuentoTxt;
+        private System.Windows.Forms.Label lblSubtotal;
+        private System.Windows.Forms.Label lblSubtotalTxt;
+        private System.Windows.Forms.ListBox lstPedido;
+        private System.Windows.Forms.Label lblEncabezado;
+        private System.Windows.Forms.Button btnAgregar;
+        private System.Windows.Forms.Button btnSalir;
+        private System.Windows.Forms.Button btnLimpiar;
+        private System.Windows.Forms.Button btnCalcular;
+        private System.Windows.Forms.CheckBox chkPorcionExtra;
+        private System.Windows.Forms.RadioButton rbtLocal;
+        private System.Windows.Forms.RadioButton rbtLlevar;
+        private System.Windows.Forms.GroupBox grpServicio;
+        private System.Windows.Forms.RadioButton rbtNormal;
+        private System.Windows.Forms.RadioButton rbtGrande;
+        private System.Windows.Forms.GroupBox grpTamano;
+        private System.Windows.Forms.NumericUpDown nudCantidad;
+        private System.Windows.Forms.Label lblCantidad;
+        private System.Windows.Forms.TextBox txtPrecio;
+        private System.Windows.Forms.Label lblPrecio;
+        private System.Windows.Forms.TextBox txtProducto;
+        private System.Windows.Forms.Label lblProducto;
+        private System.Windows.Forms.DateTimePicker dtpFecha;
+        private System.Windows.Forms.Label lblFecha;
+        private System.Windows.Forms.CheckBox chkFrecuente;
+        private System.Windows.Forms.TextBox txtCliente;
+        private System.Windows.Forms.Label lblCliente;
+    }
+}
